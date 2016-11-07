@@ -4,6 +4,39 @@
 
 EXTERN_C
 
+QudaTboundary get_boundary(char* s){
+  QudaTboundary ret = QUDA_ANTI_PERIODIC_T;
+  if (strcmp(s, "periodic") == 0){
+    ret = QUDA_PERIODIC_T;
+  }
+  else if (strcmp(s, "antiperiodic") == 0){
+    ret = QUDA_ANTI_PERIODIC_T;
+  }
+  else{
+    fprintf(stderr, "Error: invalid precision type\n");
+    exit(1);    
+  }
+  return ret;
+}
+
+const char* get_boundary_str(QudaTboundary boundary){
+  const char *ret;
+  switch(boundary){
+  case QUDA_PERIODIC_T:
+    ret = "periodic";
+    break;
+  case QUDA_ANTI_PERIODIC_T:
+    ret = "antiperiodic";
+    break;
+  default:
+    ret = "unknown";
+    fprintf(stderr, "Error: invalid boundary conditions\n");
+    exit(-1);
+    break;    
+  }
+  return ret;
+}
+
 QudaPrecision get_prec(char* s)
 {
   QudaPrecision ret = QUDA_DOUBLE_PRECISION;

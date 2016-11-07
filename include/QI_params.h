@@ -26,6 +26,8 @@ namespace qi_qcd{
   };
 
 EXTERN_C
+  QudaTboundary get_boundary(char* s);
+ const char* get_boundary_str(QudaTboundary boundary);
   QudaPrecision get_prec(char* s);
   const char* get_prec_str(QudaPrecision prec);
   QudaReconstructType get_recon(char* s);
