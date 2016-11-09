@@ -1,7 +1,7 @@
 include ../make.inc
 QUDA_INTFC = libquda_intfc.a
-QI_OBJS= QI_get_params.o QI_comms.o QI_trans_inputs.o
-QI_HDRS= Cdefs.h QI_comms.h QI_params.h QI_qcd.h
+QI_OBJS= QI_get_params.o QI_comms.o QI_trans_inputs.o QI_io.o QI_mapping_parity.o QI_interface.o
+QI_HDRS= Cdefs.h QI_comms.h QI_params.h QI_qcd.h QI_io.h QI_mapping_parity.h
 INL_HDRS=
 INC += -I./
 

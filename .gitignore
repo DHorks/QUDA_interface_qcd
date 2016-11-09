@@ -29,3 +29,6 @@
 *.app
 
 *~
+profile.tsv
+profile_async.tsv
+tunecache.tsv

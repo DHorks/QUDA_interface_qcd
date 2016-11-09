@@ -1,6 +1,7 @@
 #include <iostream>
 #include <QI_params.h>
 #include <QI_qcd.h>
+#include <QI_io.h>
 #include <comm_quda.h>
 #include <string.h>
 #include <stdlib.h>
@@ -24,7 +25,7 @@ static std::string to_string( int x ) {
   return str;
 }
 
-static char* getParam(char token[],char* params,int len)
+char* getParam(char token[],char* params,int len)
 {
   bool check_match = false;
   int i,token_len=strlen(token);
@@ -74,6 +75,10 @@ char* getParams(char* fname,int *len)
 void getGridInfo(char* params, int params_len){
   sscanf(getParam("<processors_txyz>",params,params_len),"%hd %hd %hd %hd",&qi_geo.gridsize[3], &qi_geo.gridsize[0], &qi_geo.gridsize[1], &qi_geo.gridsize[2]);
   sscanf(getParam("<lattice_txyz>",params,params_len),"%hd %hd %hd %hd",&qi_geo.tdim, &qi_geo.xdim, &qi_geo.ydim, &qi_geo.zdim);
+  assert(qi_geo.tdim%qi_geo.gridsize[3] == 0); qi_geo.tdim /= qi_geo.gridsize[3];
+  assert(qi_geo.xdim%qi_geo.gridsize[0] == 0); qi_geo.xdim /= qi_geo.gridsize[0];
+  assert(qi_geo.ydim%qi_geo.gridsize[1] == 0); qi_geo.ydim /= qi_geo.gridsize[1];
+  assert(qi_geo.zdim%qi_geo.gridsize[2] == 0); qi_geo.zdim /= qi_geo.gridsize[2];
 }
 
 
@@ -108,17 +113,20 @@ void getArgs_QI_qcd(char* params, int params_len){
   int mg_nu_post=0;
   if(inv_type == QUDA_MG_INVERTER){
     sscanf(getParam("<QUDA_MG_nlvls>",params,params_len),"%d",&mg_nlvls); // number of multigrid levels
-    assert(mg_nlvls > 0);
-    for(int i = 0 ; i < mg_nlvls; i++){
+    assert(mg_nlvls > 1);
+    for(int i = 0 ; i < mg_nlvls-1; i++){
       str_nullVec = "<QUDA_MG_lvl" + to_string(i) + "_nNulls>";
       sscanf(getParam(&str_nullVec[0],params,params_len),"%d",&tmp_int); // number of null vectors for each level
       mg_nNulls.push_back(tmp_int);
     }
-    for(int i = 0 ; i < mg_nlvls; i++){
+    mg_nNulls.push_back(0);
+    for(int i = 0 ; i < mg_nlvls-1; i++){
       str_blocks = "<QUDA_MG_lvl" + to_string(i) + "_blck_size_xyzt>";
       sscanf(getParam(&str_blocks[0],params,params_len),"%d %d %d %d",&block_xyzt[0],&block_xyzt[1],&block_xyzt[2],&block_xyzt[3]); // block size for each level
       all_block_xyzt.push_back(block_xyzt);
     }
+    block_xyzt[0]=1;block_xyzt[1]=1;block_xyzt[2]=1;block_xyzt[3]=1;
+    all_block_xyzt.push_back(block_xyzt);
     sscanf(getParam("<QUDA_MG_mu_coarse>",params,params_len),"%lf",&mg_mu_coarse); // the mu value for multigrid at coarse level
     sscanf(getParam("<QUDA_MG_nu_pre>",params,params_len),"%d",&mg_nu_pre); //The number of pre-smoother applications to do at each multigrid level
     sscanf(getParam("<QUDA_MG_nu_post>",params,params_len),"%d",&mg_nu_post); //The number of post-smoother applications to do at each multigrid level
@@ -134,15 +142,16 @@ void getArgs_QI_qcd(char* params, int params_len){
     printf("<recon_preco> = %s\n",get_recon_str(recon_preco));
     printf("<dslash_type> = %s\n",get_dslash_str(dslash_type));
     printf("<boundary_conditions> = %s\n",get_boundary_str(boundary_cond));
+    printf("<tolerance> = %e\n",tol);
     printf("<inv_type> = %s\n",get_solver_str(inv_type));
     printf("<mu_val> = %f\n",mu_val);
     printf("<kappa> = %f\n",kappa);
     printf("<csw = %f>\n",csw);
     if(inv_type == QUDA_MG_INVERTER){
       printf("<mg_nlvls> = %d\n",mg_nlvls);
-      for(int i = 0 ; i < mg_nlvls; i++)
+      for(int i = 0 ; i < mg_nlvls-1; i++)
 	printf("<mg_lvl%d> <Nnulls=%d>\n",i,mg_nNulls[i]);
-      for(int i = 0 ; i < mg_nlvls; i++)
+      for(int i = 0 ; i < mg_nlvls-1; i++)
 	printf("<mg_lvl%d> <block=(x=%d,y=%d,z=%d,t=%d)>\n",i,all_block_xyzt[i][0],all_block_xyzt[i][1],all_block_xyzt[i][2],all_block_xyzt[i][3]);
       printf("<mg_mu_coarse> = %f\n",mg_mu_coarse);
       printf("<mg_nu_pre> = %d\n",mg_nu_pre);
@@ -156,6 +165,8 @@ void getArgs_QI_qcd(char* params, int params_len){
   qi_params.gauge_param.X[1]=qi_geo.ydim;
   qi_params.gauge_param.X[2]=qi_geo.zdim;
   qi_params.gauge_param.X[3]=qi_geo.tdim;
+  setDims(qi_params.gauge_param.X);
+  setSpinorSiteSize(24);
   qi_params.gauge_param.anisotropy=1.;
   qi_params.gauge_param.type = QUDA_WILSON_LINKS;
   qi_params.gauge_param.gauge_order = QUDA_QDP_GAUGE_ORDER;
@@ -205,7 +216,7 @@ void getArgs_QI_qcd(char* params, int params_len){
   qi_params.inv_param.gcrNkrylov = 20;
   qi_params.inv_param.tol = tol;
   qi_params.inv_param.tol_restart = 1e-3; 
-  double tol_hq = 0.2;
+  double tol_hq = 0.;
 
   if(inv_type ==  QUDA_CG_INVERTER){
     qi_params.inv_param.residual_type = static_cast<QudaResidualType_s>(0);
@@ -241,12 +252,12 @@ void getArgs_QI_qcd(char* params, int params_len){
   qi_params.inv_param.cuda_prec = prec;
   qi_params.inv_param.cuda_prec_sloppy = prec_sloppy;
   qi_params.inv_param.preserve_source = QUDA_PRESERVE_SOURCE_YES;
-  qi_params.inv_param.gamma_basis = QUDA_DEGRAND_ROSSI_GAMMA_BASIS;
+  qi_params.inv_param.gamma_basis = QUDA_UKQCD_GAMMA_BASIS;//QUDA_DEGRAND_ROSSI_GAMMA_BASIS;
   qi_params.inv_param.dirac_order = QUDA_DIRAC_ORDER;
 
   qi_params.inv_param.input_location = QUDA_CPU_FIELD_LOCATION;
   qi_params.inv_param.output_location = QUDA_CPU_FIELD_LOCATION;
-  qi_params.inv_param.tune = QUDA_TUNE_YES; // the tuning will be on
+  qi_params.inv_param.tune = QUDA_TUNE_YES; // for now switch off tuning for tests but remember to enable it later
   qi_params.inv_param.sp_pad = 0;
   qi_params.inv_param.cl_pad = 0;
   
@@ -270,6 +281,7 @@ void getArgs_QI_qcd(char* params, int params_len){
     qi_params.mg_inv_param.reliable_delta = 1e-10;
     qi_params.mg_inv_param.gcrNkrylov = 10;
     qi_params.mg_inv_param.solve_type = QUDA_DIRECT_SOLVE;
+    qi_params.mg_inv_param.twist_flavor=QUDA_TWIST_MINUS; // choose one flavor to do the null vectors
     qi_params.mg_param.invert_param = &qi_params.mg_inv_param;
 
     qi_params.mg_param.mu_coarse = mg_mu_coarse;
@@ -282,10 +294,10 @@ void getArgs_QI_qcd(char* params, int params_len){
       qi_params.mg_param.nu_post[i] = mg_nu_post;
       qi_params.mg_param.cycle_type[i] = QUDA_MG_CYCLE_RECURSIVE;
       qi_params.mg_param.smoother[i] = QUDA_MR_INVERTER;
-      qi_params.mg_param.smoother_tol[i] = tol_hq; // they use tol_hq instead define another parameter (stupid)
+      qi_params.mg_param.smoother_tol[i] = 0.2; // play with this tolerance later
       qi_params.mg_param.global_reduction[i] = QUDA_BOOLEAN_YES;
       qi_params.mg_param.smoother_solve_type[i] = QUDA_DIRECT_PC_SOLVE;
-      qi_params.mg_param.coarse_grid_solution_type[i] = QUDA_MAT_SOLUTION;
+      qi_params.mg_param.coarse_grid_solution_type[i] = QUDA_MATPC_SOLUTION;
       qi_params.mg_param.omega[i] = 0.85; // over/under relaxation factor
       qi_params.mg_param.location[i] = QUDA_CUDA_FIELD_LOCATION;
     }
@@ -294,6 +306,8 @@ void getArgs_QI_qcd(char* params, int params_len){
     qi_params.mg_param.compute_null_vector = QUDA_COMPUTE_NULL_VECTOR_YES;
     qi_params.mg_param.generate_all_levels = QUDA_BOOLEAN_YES;
     qi_params.mg_param.run_verify = QUDA_BOOLEAN_YES;
+    strcpy(qi_params.mg_param.vec_outfile,"");
+    strcpy(qi_params.mg_param.vec_infile,"");
   }
 
 }
