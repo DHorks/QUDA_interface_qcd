@@ -14,7 +14,12 @@ char* getParam(char token[],char* params,int len);
 
 void initQI(char* params, int params_len);
 void closeQI();
-void checkInvert();
+void checkInvert_Up();
+void checkInvert_Down();
+void initQI_qcd(void *gauge_qcd,char* params, int params_len);
+void closeQI_qcd();
+void invert_QI_qcd_up(const void *spinorIn, void *spinorOut);
+void invert_QI_qcd_down(const void *spinorIn, void *spinorOut);
 EXTERN_C_END
 
 #endif

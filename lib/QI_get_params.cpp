@@ -74,11 +74,11 @@ char* getParams(char* fname,int *len)
 
 void getGridInfo(char* params, int params_len){
   sscanf(getParam("<processors_txyz>",params,params_len),"%hd %hd %hd %hd",&qi_geo.gridsize[3], &qi_geo.gridsize[0], &qi_geo.gridsize[1], &qi_geo.gridsize[2]);
-  sscanf(getParam("<lattice_txyz>",params,params_len),"%hd %hd %hd %hd",&qi_geo.tdim, &qi_geo.xdim, &qi_geo.ydim, &qi_geo.zdim);
-  assert(qi_geo.tdim%qi_geo.gridsize[3] == 0); qi_geo.tdim /= qi_geo.gridsize[3];
-  assert(qi_geo.xdim%qi_geo.gridsize[0] == 0); qi_geo.xdim /= qi_geo.gridsize[0];
-  assert(qi_geo.ydim%qi_geo.gridsize[1] == 0); qi_geo.ydim /= qi_geo.gridsize[1];
-  assert(qi_geo.zdim%qi_geo.gridsize[2] == 0); qi_geo.zdim /= qi_geo.gridsize[2];
+  sscanf(getParam("<lattice_txyz>",params,params_len),"%hd %hd %hd %hd",&qi_geo.L[3], &qi_geo.L[0], &qi_geo.L[1], &qi_geo.L[2]);
+  assert(qi_geo.L[3]%qi_geo.gridsize[3] == 0); qi_geo.tdim = qi_geo.L[3] / qi_geo.gridsize[3];
+  assert(qi_geo.L[0]%qi_geo.gridsize[0] == 0); qi_geo.xdim =qi_geo. L[0] / qi_geo.gridsize[0];
+  assert(qi_geo.L[1]%qi_geo.gridsize[1] == 0); qi_geo.ydim = qi_geo.L[1] / qi_geo.gridsize[1];
+  assert(qi_geo.L[2]%qi_geo.gridsize[2] == 0); qi_geo.zdim = qi_geo.L[2] / qi_geo.gridsize[2];
 }
 
 
@@ -281,7 +281,7 @@ void getArgs_QI_qcd(char* params, int params_len){
     qi_params.mg_inv_param.reliable_delta = 1e-10;
     qi_params.mg_inv_param.gcrNkrylov = 10;
     qi_params.mg_inv_param.solve_type = QUDA_DIRECT_SOLVE;
-    qi_params.mg_inv_param.twist_flavor=QUDA_TWIST_MINUS; // choose one flavor to do the null vectors
+    qi_params.mg_inv_param.twist_flavor=QUDA_TWIST_PLUS;
     qi_params.mg_param.invert_param = &qi_params.mg_inv_param;
 
     qi_params.mg_param.mu_coarse = mg_mu_coarse;

@@ -18,11 +18,12 @@ namespace qi_qcd{
   };
 
   struct QI_geo {
-    int xdim;
-    int ydim;
-    int zdim;
-    int tdim;
-    int gridsize[4];
+    int xdim; // lLx local dimensions
+    int ydim; // lLy
+    int zdim; // lLz
+    int tdim; // lLt
+    int gridsize[4]; // number of processors in each direction
+    int L[4]; // total Lattice size
   };
 
 EXTERN_C

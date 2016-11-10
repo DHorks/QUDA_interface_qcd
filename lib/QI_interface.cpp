@@ -3,12 +3,15 @@
 #include <QI_params.h>
 #include <QI_qcd.h>
 #include <QI_io.h>
-#include <QI_mapping_parity.h>
+#include <QI_mapping.h>
 #include <comm_quda.h>
 #include <string.h>
 #include <stdlib.h>
 #include <vector>
 #include <cassert>
+#include <math.h>
+#include <QI_boundaryPhases.h>
+#include <QI_gammaTrans.h>
 #define gaugeSiteSize 18
 #define spinorSiteSize 24
 using namespace qi_qcd;
@@ -66,7 +69,67 @@ void closeQI(){
   endQuda();
 }
 
-void checkInvert(){
+void initQI_qcd(void *gauge_qcd,char* params, int params_len){
+  initCommsQuda(params,params_len);
+  getArgs_QI_qcd(params,params_len);
+  for (int dir = 0; dir < 4; dir++)
+    gauge[dir] = malloc(V*gaugeSiteSize*sizeof(double));
+  mapGauge_qcd_to_QUDA_eo(gauge_qcd,gauge);
+  applyBoundaryCondition(gauge, V/2 ,&qi_params.gauge_param);
+  initQuda(-1); // the value -1 is for multi gpu code
+  loadGaugeQuda((void*)gauge, &qi_params.gauge_param);
+  if(qi_params.mg_param.smoother_solve_type[0] == QUDA_DIRECT_PC_SOLVE || qi_params.inv_param.solve_type == QUDA_DIRECT_PC_SOLVE ){ // in case we use MG
+    QudaSolveType tmpSl = qi_params.inv_param.solve_type;
+    qi_params.inv_param.solve_type == QUDA_DIRECT_PC_SOLVE;
+    if (qi_params.inv_param.dslash_type == QUDA_CLOVER_WILSON_DSLASH || qi_params.inv_param.dslash_type == QUDA_TWISTED_CLOVER_DSLASH)
+      loadCloverQuda(NULL, NULL, &qi_params.inv_param);
+    qi_params.inv_param.solve_type = tmpSl;
+  }
+  else{ // in case we use CG
+    if (qi_params.inv_param.dslash_type == QUDA_CLOVER_WILSON_DSLASH || qi_params.inv_param.dslash_type == QUDA_TWISTED_CLOVER_DSLASH)
+      loadCloverQuda(NULL, NULL, &qi_params.inv_param);    
+  }
+  if(qi_params.inv_param.inv_type_precondition == QUDA_MG_INVERTER) initMG();
+}
+
+void closeQI_qcd(){
+  closeQI();
+}
+
+static void invert_QI_qcd(const void *spinorIn, void *spinorOut){
+  void *spinorIn_QUDA = malloc(V*spinorSiteSize*sizeof(double));
+  void *spinorOut_QUDA = malloc(V*spinorSiteSize*sizeof(double));
+  mapVector_qcd_to_QUDA(spinorIn,spinorIn_QUDA);
+  mapVector_qcd_to_QUDA(spinorOut,spinorOut_QUDA);
+
+  gammaRotate_dg_ch(spinorIn_QUDA);
+  boundary_phases(spinorIn_QUDA,true); // multiplies with source vector with dagger
+  mapNormalToEvenOdd(spinorIn_QUDA,qi_params.inv_param,qi_geo.xdim,qi_geo.ydim,qi_geo.zdim,qi_geo.tdim);
+  mapNormalToEvenOdd(spinorOut_QUDA,qi_params.inv_param,qi_geo.xdim,qi_geo.ydim,qi_geo.zdim,qi_geo.tdim);
+  invertQuda(spinorOut_QUDA,spinorIn_QUDA,&qi_params.inv_param);
+  mapEvenOddToNormal(spinorOut_QUDA,qi_params.inv_param,qi_geo.xdim,qi_geo.ydim,qi_geo.zdim,qi_geo.tdim);
+  boundary_phases(spinorOut_QUDA,false);
+  gammaRotate_dg_ch(spinorOut_QUDA);
+  
+
+  mapVector_QUDA_to_qcd(spinorOut_QUDA,spinorOut);
+  free(spinorIn_QUDA);
+  free(spinorOut_QUDA);
+}
+
+void invert_QI_qcd_up(const void *spinorIn, void *spinorOut){
+  qi_params.inv_param.twist_flavor=QUDA_TWIST_PLUS; // this is always plus and we choose the sign from the mu value
+  qi_params.inv_param.mu = - fabs(qi_params.inv_param.mu); // in quda we invert the opposite flavor than tmLQCD
+  invert_QI_qcd(spinorIn, spinorOut);
+}
+
+void invert_QI_qcd_down(const void *spinorIn, void *spinorOut){
+  qi_params.inv_param.twist_flavor=QUDA_TWIST_PLUS; // this is always plus and we choose the sign from the mu value
+  qi_params.inv_param.mu = fabs(qi_params.inv_param.mu); // in quda we invert the opposite flavor than tmLQCD
+  invert_QI_qcd(spinorIn, spinorOut);
+}
+
+void checkInvert_Down(){
   void *spinorIn = malloc(V*spinorSiteSize*sizeof(double));
   void *spinorOut = malloc(V*spinorSiteSize*sizeof(double));
   memset(spinorOut,0,V*spinorSiteSize*sizeof(double));
@@ -75,7 +138,28 @@ void checkInvert(){
       ((double*)spinorIn)[i]=1.;
     else
     ((double*)spinorIn)[i]=0.;
-  qi_params.inv_param.twist_flavor=QUDA_TWIST_MINUS;
+  qi_params.inv_param.twist_flavor=QUDA_TWIST_PLUS;
+  qi_params.inv_param.mu = - fabs(qi_params.inv_param.mu);
+  mapNormalToEvenOdd(spinorIn,qi_params.inv_param,qi_geo.xdim,qi_geo.ydim,qi_geo.zdim,qi_geo.tdim);
+  invertQuda(spinorOut,spinorIn,&qi_params.inv_param);
+  mapEvenOddToNormal(spinorOut,qi_params.inv_param,qi_geo.xdim,qi_geo.ydim,qi_geo.zdim,qi_geo.tdim);
+  printVector("/home/khadjiyiannakou/QUDA_interface_qcd/spinorOut",spinorOut);
+  free(spinorIn);
+  free(spinorOut);
+}
+
+void checkInvert_Up(){
+  void *spinorIn = malloc(V*spinorSiteSize*sizeof(double));
+  void *spinorOut = malloc(V*spinorSiteSize*sizeof(double));
+  memset(spinorOut,0,V*spinorSiteSize*sizeof(double));
+  for(int i = 0 ; i < V*spinorSiteSize ; i++)
+    if(i==0 && comm_rank() == 0)
+      ((double*)spinorIn)[i]=1.;
+    else
+    ((double*)spinorIn)[i]=0.;
+  qi_params.inv_param.twist_flavor=QUDA_TWIST_PLUS;
+  qi_params.inv_param.mu = fabs(qi_params.inv_param.mu);
+  mapNormalToEvenOdd(spinorIn,qi_params.inv_param,qi_geo.xdim,qi_geo.ydim,qi_geo.zdim,qi_geo.tdim);
   invertQuda(spinorOut,spinorIn,&qi_params.inv_param);
   mapEvenOddToNormal(spinorOut,qi_params.inv_param,qi_geo.xdim,qi_geo.ydim,qi_geo.zdim,qi_geo.tdim);
   printVector("/home/khadjiyiannakou/QUDA_interface_qcd/spinorOut",spinorOut);

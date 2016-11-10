@@ -4,7 +4,7 @@
 #include <comm_quda.h>
 #include <util_quda.h>
 #include <Cdefs.h>
-#include <QI_mapping_parity.h>
+#include <QI_mapping.h>
 #define spinorSiteSize 24
 #define gaugeSiteSize 18 
 static int getLatticeCoordinateParity2(int latt_coord, int nx , int ny , int nz)
@@ -437,6 +437,49 @@ void mapEvenOddToNormalGauge(void **gauge, QudaGaugeParam param, int nx , int ny
     else
       errorQuda("only QDP order supported for gauge");
     }
+}
+
+// this function will map it also to even odd form
+// but later you should apply the boundaries
+#include <QI_params.h>
+extern qi_qcd::QI_geo qi_geo;
+extern qi_qcd::QI_params qi_params;
+
+void mapGauge_qcd_to_QUDA_eo(const void *gauge_qcd, void **gauge_QUDA){
+    for(int tt=0; tt<qi_geo.tdim; tt++)
+      for(int zz=0; zz<qi_geo.zdim; zz++)
+	for(int yy=0; yy<qi_geo.ydim; yy++)
+	  for(int xx=0; xx<qi_geo.xdim; xx++){
+	    long int pt_qcd = zz*qi_geo.ydim*qi_geo.xdim*qi_geo.tdim + yy*qi_geo.xdim*qi_geo.tdim + xx*qi_geo.tdim + tt;
+	    long int pt_QUDA = tt*qi_geo.zdim*qi_geo.ydim*qi_geo.xdim + zz*qi_geo.ydim*qi_geo.xdim + yy*qi_geo.xdim + xx;
+	    for(int mu_QUDA = 0; mu_QUDA < 4 ; mu_QUDA++){
+	      int mu_qcd = (mu_QUDA+1)%4;
+	      memcpy((double*)gauge_QUDA[mu_QUDA] + pt_QUDA*18, (double*)gauge_qcd + pt_qcd*4*18 + mu_qcd*18, 18*sizeof(double));
+	    }
+	  }
+  mapNormalToEvenOddGauge(gauge_QUDA,qi_params.gauge_param,qi_geo.xdim,qi_geo.ydim,qi_geo.zdim,qi_geo.tdim);
+}
+
+void mapVector_qcd_to_QUDA(const void *vec_qcd, void *vec_QUDA){
+    for(int tt=0; tt<qi_geo.tdim; tt++)
+      for(int zz=0; zz<qi_geo.zdim; zz++)
+	for(int yy=0; yy<qi_geo.ydim; yy++)
+	  for(int xx=0; xx<qi_geo.xdim; xx++){
+	    long int pt_qcd = zz*qi_geo.ydim*qi_geo.xdim*qi_geo.tdim + yy*qi_geo.xdim*qi_geo.tdim + xx*qi_geo.tdim + tt;
+	    long int pt_QUDA = tt*qi_geo.zdim*qi_geo.ydim*qi_geo.xdim + zz*qi_geo.ydim*qi_geo.xdim + yy*qi_geo.xdim + xx;
+	    memcpy((double*)vec_QUDA + pt_QUDA*24, (double*)vec_qcd + pt_qcd*24, 24*sizeof(double));
+	  }
+}
+
+void mapVector_QUDA_to_qcd(void *vec_QUDA, void *vec_qcd){
+    for(int tt=0; tt<qi_geo.tdim; tt++)
+      for(int zz=0; zz<qi_geo.zdim; zz++)
+	for(int yy=0; yy<qi_geo.ydim; yy++)
+	  for(int xx=0; xx<qi_geo.xdim; xx++){
+	    long int pt_qcd = zz*qi_geo.ydim*qi_geo.xdim*qi_geo.tdim + yy*qi_geo.xdim*qi_geo.tdim + xx*qi_geo.tdim + tt;
+	    long int pt_QUDA = tt*qi_geo.zdim*qi_geo.ydim*qi_geo.xdim + zz*qi_geo.ydim*qi_geo.xdim + yy*qi_geo.xdim + xx;
+	    memcpy((double*)vec_qcd + pt_qcd*24,(double*)vec_QUDA + pt_QUDA*24, 24*sizeof(double));
+	  }
 }
 
 EXTERN_C_END

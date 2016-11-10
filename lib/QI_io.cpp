@@ -968,6 +968,4 @@ int printVector(char file_pref[], void *vec){
   return 0;
 }
 
-
-
 EXTERN_C_END
