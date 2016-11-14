@@ -4,6 +4,7 @@
 #include <QI_qcd.h>
 #include <comm_quda.h>
 #include <cassert>
+#include <stdlib.h>
 
 extern qi_qcd::QI_geo qi_geo;
 extern Topology *default_topo;

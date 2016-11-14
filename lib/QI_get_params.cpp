@@ -76,7 +76,7 @@ void getGridInfo(char* params, int params_len){
   sscanf(getParam("<processors_txyz>",params,params_len),"%hd %hd %hd %hd",&qi_geo.gridsize[3], &qi_geo.gridsize[0], &qi_geo.gridsize[1], &qi_geo.gridsize[2]);
   sscanf(getParam("<lattice_txyz>",params,params_len),"%hd %hd %hd %hd",&qi_geo.L[3], &qi_geo.L[0], &qi_geo.L[1], &qi_geo.L[2]);
   assert(qi_geo.L[3]%qi_geo.gridsize[3] == 0); qi_geo.tdim = qi_geo.L[3] / qi_geo.gridsize[3];
-  assert(qi_geo.L[0]%qi_geo.gridsize[0] == 0); qi_geo.xdim =qi_geo. L[0] / qi_geo.gridsize[0];
+  assert(qi_geo.L[0]%qi_geo.gridsize[0] == 0); qi_geo.xdim = qi_geo.L[0] / qi_geo.gridsize[0];
   assert(qi_geo.L[1]%qi_geo.gridsize[1] == 0); qi_geo.ydim = qi_geo.L[1] / qi_geo.gridsize[1];
   assert(qi_geo.L[2]%qi_geo.gridsize[2] == 0); qi_geo.zdim = qi_geo.L[2] / qi_geo.gridsize[2];
 }
@@ -157,6 +157,7 @@ void getArgs_QI_qcd(char* params, int params_len){
       printf("<mg_nu_pre> = %d\n",mg_nu_pre);
       printf("<mg_nu_post> = %d\n",mg_nu_post);
     }
+    fflush(stdout);
   }
 #endif
 
@@ -252,7 +253,7 @@ void getArgs_QI_qcd(char* params, int params_len){
   qi_params.inv_param.cuda_prec = prec;
   qi_params.inv_param.cuda_prec_sloppy = prec_sloppy;
   qi_params.inv_param.preserve_source = QUDA_PRESERVE_SOURCE_YES;
-  qi_params.inv_param.gamma_basis = QUDA_UKQCD_GAMMA_BASIS;//QUDA_DEGRAND_ROSSI_GAMMA_BASIS;
+  qi_params.inv_param.gamma_basis = QUDA_DEGRAND_ROSSI_GAMMA_BASIS;//QUDA_UKQCD_GAMMA_BASIS;
   qi_params.inv_param.dirac_order = QUDA_DIRAC_ORDER;
 
   qi_params.inv_param.input_location = QUDA_CPU_FIELD_LOCATION;
