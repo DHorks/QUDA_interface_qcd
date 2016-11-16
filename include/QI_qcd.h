@@ -10,7 +10,7 @@ EXTERN_C
 void getGridInfo(char* params, int params_len);
 void getArgs_QI_qcd(char* params, int params_len);
 char* getParams(char* fname,int *len);
-char* getParam(char token[],char* params,int len);
+char* getParam(const char token[],char* params,int len);
 
 void initQI(char* params, int params_len);
 void closeQI();

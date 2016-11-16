@@ -25,7 +25,7 @@ static std::string to_string( int x ) {
   return str;
 }
 
-char* getParam(char token[],char* params,int len)
+char* getParam(const char token[],char* params,int len)
 {
   bool check_match = false;
   int i,token_len=strlen(token);
@@ -73,8 +73,8 @@ char* getParams(char* fname,int *len)
 
 
 void getGridInfo(char* params, int params_len){
-  sscanf(getParam("<processors_txyz>",params,params_len),"%hd %hd %hd %hd",&qi_geo.gridsize[3], &qi_geo.gridsize[0], &qi_geo.gridsize[1], &qi_geo.gridsize[2]);
-  sscanf(getParam("<lattice_txyz>",params,params_len),"%hd %hd %hd %hd",&qi_geo.L[3], &qi_geo.L[0], &qi_geo.L[1], &qi_geo.L[2]);
+  sscanf(getParam("<processors_txyz>",params,params_len),"%d %d %d %d",&qi_geo.gridsize[3], &qi_geo.gridsize[0], &qi_geo.gridsize[1], &qi_geo.gridsize[2]);
+  sscanf(getParam("<lattice_txyz>",params,params_len),"%d %d %d %d",&qi_geo.L[3], &qi_geo.L[0], &qi_geo.L[1], &qi_geo.L[2]);
   assert(qi_geo.L[3]%qi_geo.gridsize[3] == 0); qi_geo.tdim = qi_geo.L[3] / qi_geo.gridsize[3];
   assert(qi_geo.L[0]%qi_geo.gridsize[0] == 0); qi_geo.xdim = qi_geo.L[0] / qi_geo.gridsize[0];
   assert(qi_geo.L[1]%qi_geo.gridsize[1] == 0); qi_geo.ydim = qi_geo.L[1] / qi_geo.gridsize[1];

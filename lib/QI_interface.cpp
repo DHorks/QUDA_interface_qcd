@@ -46,7 +46,7 @@ void initQI(char* params, int params_len){
 
   if(qi_params.mg_param.smoother_solve_type[0] == QUDA_DIRECT_PC_SOLVE || qi_params.inv_param.solve_type == QUDA_DIRECT_PC_SOLVE ){ // in case we use MG
     QudaSolveType tmpSl = qi_params.inv_param.solve_type;
-    qi_params.inv_param.solve_type == QUDA_DIRECT_PC_SOLVE;
+    qi_params.inv_param.solve_type = QUDA_DIRECT_PC_SOLVE;
     if (qi_params.inv_param.dslash_type == QUDA_CLOVER_WILSON_DSLASH || qi_params.inv_param.dslash_type == QUDA_TWISTED_CLOVER_DSLASH)
       loadCloverQuda(NULL, NULL, &qi_params.inv_param);
     qi_params.inv_param.solve_type = tmpSl;
@@ -80,7 +80,7 @@ void initQI_qcd(void *gauge_qcd,char* params, int params_len){
   loadGaugeQuda((void*)gauge, &qi_params.gauge_param);
   if(qi_params.mg_param.smoother_solve_type[0] == QUDA_DIRECT_PC_SOLVE || qi_params.inv_param.solve_type == QUDA_DIRECT_PC_SOLVE ){ // in case we use MG
     QudaSolveType tmpSl = qi_params.inv_param.solve_type;
-    qi_params.inv_param.solve_type == QUDA_DIRECT_PC_SOLVE;
+    qi_params.inv_param.solve_type = QUDA_DIRECT_PC_SOLVE;
     if (qi_params.inv_param.dslash_type == QUDA_CLOVER_WILSON_DSLASH || qi_params.inv_param.dslash_type == QUDA_TWISTED_CLOVER_DSLASH)
       loadCloverQuda(NULL, NULL, &qi_params.inv_param);
     qi_params.inv_param.solve_type = tmpSl;
@@ -143,7 +143,7 @@ void checkInvert_Down(){
   mapNormalToEvenOdd(spinorIn,qi_params.inv_param,qi_geo.xdim,qi_geo.ydim,qi_geo.zdim,qi_geo.tdim);
   invertQuda(spinorOut,spinorIn,&qi_params.inv_param);
   mapEvenOddToNormal(spinorOut,qi_params.inv_param,qi_geo.xdim,qi_geo.ydim,qi_geo.zdim,qi_geo.tdim);
-  printVector("/home/khadjiyiannakou/QUDA_interface_qcd/spinorOut",spinorOut);
+  //  printVector("/home/khadjiyiannakou/QUDA_interface_qcd/spinorOut",spinorOut);
   free(spinorIn);
   free(spinorOut);
 }
@@ -162,7 +162,7 @@ void checkInvert_Up(){
   mapNormalToEvenOdd(spinorIn,qi_params.inv_param,qi_geo.xdim,qi_geo.ydim,qi_geo.zdim,qi_geo.tdim);
   invertQuda(spinorOut,spinorIn,&qi_params.inv_param);
   mapEvenOddToNormal(spinorOut,qi_params.inv_param,qi_geo.xdim,qi_geo.ydim,qi_geo.zdim,qi_geo.tdim);
-  printVector("/home/khadjiyiannakou/QUDA_interface_qcd/spinorOut",spinorOut);
+  //  printVector("/home/khadjiyiannakou/QUDA_interface_qcd/spinorOut",spinorOut);
   free(spinorIn);
   free(spinorOut);
 }

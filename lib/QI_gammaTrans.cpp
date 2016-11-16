@@ -13,7 +13,6 @@ void gammaRotate_dg_ch(void *vec){
   assert(qi_params.inv_param.dirac_order == QUDA_DIRAC_ORDER); //colors inside spins
   assert(qi_params.inv_param.gamma_basis == QUDA_DEGRAND_ROSSI_GAMMA_BASIS); // MG works only with DEGRAND_ROSSI
   Complex tmp[4];
-  Complex *Cvec;
   for(int i = 0 ; i < V ; i++)
     for(int c = 0 ; c < 3 ; c++){
       Complex *Cvec = ((Complex*)vec) + i*12;
