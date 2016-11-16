@@ -92,6 +92,7 @@ void getArgs_QI_qcd(char* params, int params_len){
   QudaReconstructType recon_preco = get_recon( getParam("<QUDA_recon_preco>",params,params_len) ); // Link reconstruction type for preconditioner <8/9/12/13/18>
   QudaDslashType dslash_type = get_dslash_type(getParam("<QUDA_dslash_type>",params,params_len) ); // The dslash type we want to use <wilson/clover/twisted-mass/twisted-clover>
   QudaTboundary boundary_cond = get_boundary( getParam("<QUDA_boundary_cond>",params,params_len) ); // Boundary conditions that we want to use <periodic,antiperiodic>
+  QudaVerbosity verbosity = get_verbosity( getParam("<QUDA_verbosity>",params,params_len) );
   double tol; sscanf(getParam("<QUDA_tolerance>",params,params_len),"%lf",&tol); // tolerance for the inverter
   double kappa; sscanf(getParam("<QUDA_kappa>",params,params_len),"%lf",&kappa);
   double mu_val=0; if(dslash_type == QUDA_TWISTED_MASS_DSLASH || dslash_type == QUDA_TWISTED_CLOVER_DSLASH) sscanf(getParam("<QUDA_mu>",params,params_len),"%lf",&mu_val); // mu value for TMF
@@ -271,7 +272,7 @@ void getArgs_QI_qcd(char* params, int params_len){
     qi_params.inv_param.clover_coeff = csw*qi_params.inv_param.kappa;
   }
   qi_params.inv_param.Ls = 1;
-  qi_params.inv_param.verbosity = QUDA_VERBOSE;
+  qi_params.inv_param.verbosity = verbosity;
 
   //=================================== Multigrid params =================//
   if(inv_type == QUDA_MG_INVERTER){

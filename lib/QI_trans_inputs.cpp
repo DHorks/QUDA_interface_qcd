@@ -162,6 +162,24 @@ const char* get_dslash_str(QudaDslashType type)
   return ret;
 }
 
+QudaVerbosity get_verbosity(char* s){
+  QudaVerbosity ret = QUDA_INVALID_VERBOSITY;
+  if (strcmp(s, "verbose") == 0){
+    ret = QUDA_VERBOSE;
+  }
+  else if (strcmp(s, "silent") == 0){
+    ret = QUDA_SILENT;
+  }
+  else if (strcmp(s, "summarize") == 0){
+    ret= QUDA_SUMMARIZE;
+  }
+  else{
+    fprintf(stderr, "Error: invalid verbosity type\n");
+    exit(1);
+  }
+  return ret;
+}
+
 
  QudaInverterType get_solver_type(char* s)
 {

@@ -37,6 +37,7 @@ EXTERN_C
   const char* get_dslash_str(QudaDslashType type);
   QudaInverterType get_solver_type(char* s);
   const char* get_solver_str(QudaInverterType type);
+  QudaVerbosity get_verbosity(char* s);
 EXTERN_C_END
 }
 
