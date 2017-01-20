@@ -235,12 +235,14 @@ read gauge fileld config stored in binary file
   fid=fopen(fname,"r");
   if(fid==NULL)
     {
-      errorQuda("Error reading configuration! Could not open path for reading");
+      fprintf(stderr,"Error reading configuration! Could not open path for reading");
+      comm_abort(1);
     }
 	
   if ((limereader = limeCreateReader(fid))==NULL)
     {
-      errorQuda("Could not create limeReader");
+      fprintf(stderr,"Could not create limeReader");
+      comm_abort(1);
     }
 	
   while(limeReaderNextRecord(limereader)      != LIME_EOF )

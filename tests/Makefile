@@ -1,7 +1,7 @@
 include ../make.inc
 QUDA_INTFC=../lib/libquda_intfc.a
 
-TESTS=test_get_params.exe invert_test.exe
+TESTS= invert_test.exe
 INC += -I../include -I../lib -I./
 
 all:$(TESTS)

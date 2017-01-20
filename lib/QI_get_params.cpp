@@ -109,7 +109,8 @@ void getArgs_QI_qcd(char* params, int params_len){
   std::vector<int> block_xyzt(4,0);
   std::vector<std::vector<int> > all_block_xyzt;
   std::string str_blocks;
-  double mg_mu_coarse=0.;
+  //  double mg_mu_coarse=0.;
+  double mg_delta_muPR=1.;
   int mg_nu_pre=0;
   int mg_nu_post=0;
   if(inv_type == QUDA_MG_INVERTER){
@@ -128,7 +129,8 @@ void getArgs_QI_qcd(char* params, int params_len){
     }
     block_xyzt[0]=1;block_xyzt[1]=1;block_xyzt[2]=1;block_xyzt[3]=1;
     all_block_xyzt.push_back(block_xyzt);
-    sscanf(getParam("<QUDA_MG_mu_coarse>",params,params_len),"%lf",&mg_mu_coarse); // the mu value for multigrid at coarse level
+    //    sscanf(getParam("<QUDA_MG_mu_coarse>",params,params_len),"%lf",&mg_mu_coarse); // the mu value for multigrid at coarse level
+    sscanf(getParam("<QUDA_MG_delta_muPR>",params,params_len),"%lf",&mg_delta_muPR);
     sscanf(getParam("<QUDA_MG_nu_pre>",params,params_len),"%d",&mg_nu_pre); //The number of pre-smoother applications to do at each multigrid level
     sscanf(getParam("<QUDA_MG_nu_post>",params,params_len),"%d",&mg_nu_post); //The number of post-smoother applications to do at each multigrid level
   }
@@ -154,7 +156,7 @@ void getArgs_QI_qcd(char* params, int params_len){
 	printf("<mg_lvl%d> <Nnulls=%d>\n",i,mg_nNulls[i]);
       for(int i = 0 ; i < mg_nlvls-1; i++)
 	printf("<mg_lvl%d> <block=(x=%d,y=%d,z=%d,t=%d)>\n",i,all_block_xyzt[i][0],all_block_xyzt[i][1],all_block_xyzt[i][2],all_block_xyzt[i][3]);
-      printf("<mg_mu_coarse> = %f\n",mg_mu_coarse);
+      printf("<mg_delta_muPR> = %f\n",mg_delta_muPR);
       printf("<mg_nu_pre> = %d\n",mg_nu_pre);
       printf("<mg_nu_post> = %d\n",mg_nu_post);
     }
@@ -273,7 +275,7 @@ void getArgs_QI_qcd(char* params, int params_len){
   }
   qi_params.inv_param.Ls = 1;
   qi_params.inv_param.verbosity = verbosity;
-
+  qi_params.inv_param.verbosity_precondition = QUDA_SILENT;
   //=================================== Multigrid params =================//
   if(inv_type == QUDA_MG_INVERTER){
     qi_params.mg_inv_param = qi_params.inv_param;
@@ -286,7 +288,14 @@ void getArgs_QI_qcd(char* params, int params_len){
     qi_params.mg_inv_param.twist_flavor=QUDA_TWIST_PLUS;
     qi_params.mg_param.invert_param = &qi_params.mg_inv_param;
 
-    qi_params.mg_param.mu_coarse = mg_mu_coarse;
+    //    qi_params.mg_param.mu_coarse = mg_mu_coarse;
+    qi_params.mg_param.delta_muPR = mg_delta_muPR;
+    qi_params.mg_param.delta_kappaPR = 1.;
+    qi_params.mg_param.delta_cswPR = 1.;
+    qi_params.mg_param.delta_muCG = 1.;
+    qi_params.mg_param.delta_kappaCG = 1.;
+    qi_params.mg_param.delta_cswCG = 1.;
+
     qi_params.mg_param.n_level = mg_nlvls;
     for(int i = 0 ; i < mg_nlvls; i++){
       for(int j = 0 ; j < 4 ; j++) qi_params.mg_param.geo_block_size[i][j] = all_block_xyzt[i][j];
@@ -307,7 +316,7 @@ void getArgs_QI_qcd(char* params, int params_len){
     qi_params.mg_param.smoother[mg_nlvls-1] = QUDA_GCR_INVERTER;
     qi_params.mg_param.compute_null_vector = QUDA_COMPUTE_NULL_VECTOR_YES;
     qi_params.mg_param.generate_all_levels = QUDA_BOOLEAN_YES;
-    qi_params.mg_param.run_verify = QUDA_BOOLEAN_YES;
+    qi_params.mg_param.run_verify = QUDA_BOOLEAN_NO;
     strcpy(qi_params.mg_param.vec_outfile,"");
     strcpy(qi_params.mg_param.vec_infile,"");
   }

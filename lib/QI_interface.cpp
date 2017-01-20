@@ -43,7 +43,6 @@ void initQI(char* params, int params_len){
   applyBoundaryCondition(gauge, V/2 ,&qi_params.gauge_param);
   initQuda(-1); // the value -1 is for multi gpu code
   loadGaugeQuda((void*)gauge, &qi_params.gauge_param);
-
   if(qi_params.mg_param.smoother_solve_type[0] == QUDA_DIRECT_PC_SOLVE || qi_params.inv_param.solve_type == QUDA_DIRECT_PC_SOLVE ){ // in case we use MG
     QudaSolveType tmpSl = qi_params.inv_param.solve_type;
     qi_params.inv_param.solve_type = QUDA_DIRECT_PC_SOLVE;
@@ -55,7 +54,6 @@ void initQI(char* params, int params_len){
     if (qi_params.inv_param.dslash_type == QUDA_CLOVER_WILSON_DSLASH || qi_params.inv_param.dslash_type == QUDA_TWISTED_CLOVER_DSLASH)
       loadCloverQuda(NULL, NULL, &qi_params.inv_param);    
   }
-
   if(qi_params.inv_param.inv_type_precondition == QUDA_MG_INVERTER) initMG();
 }
 
