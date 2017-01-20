@@ -285,7 +285,7 @@ void getArgs_QI_qcd(char* params, int params_len){
     qi_params.mg_inv_param.reliable_delta = 1e-10;
     qi_params.mg_inv_param.gcrNkrylov = 10;
     qi_params.mg_inv_param.solve_type = QUDA_DIRECT_SOLVE;
-    qi_params.mg_inv_param.twist_flavor=QUDA_TWIST_PLUS;
+    qi_params.mg_inv_param.twist_flavor=QUDA_TWIST_INVALID;
     qi_params.mg_param.invert_param = &qi_params.mg_inv_param;
 
     //    qi_params.mg_param.mu_coarse = mg_mu_coarse;

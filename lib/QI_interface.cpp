@@ -1,5 +1,6 @@
 #include <iostream>
 #include <quda.h>
+#include <util_quda.h>
 #include <QI_params.h>
 #include <QI_qcd.h>
 #include <QI_io.h>
@@ -20,16 +21,25 @@ extern QI_params qi_params;
 extern QI_geo qi_geo;
 extern int V;
 void *gauge[4];
-void *mg_preconditioner;
+void *mg_preconditioner_up;
+void *mg_preconditioner_down;
 EXTERN_C
 
 static void initMG(){
-  mg_preconditioner = newMultigridQuda(&qi_params.mg_param);
-  qi_params.inv_param.preconditioner = mg_preconditioner;
+  qi_params.mg_inv_param.twist_flavor = QUDA_TWIST_PLUS;
+  printfQuda("Computing null vectors for up twist");
+  mg_preconditioner_up = newMultigridQuda(&qi_params.mg_param);
+  qi_params.inv_param.preconditionerUP = mg_preconditioner_up;
+
+  qi_params.mg_inv_param.twist_flavor = QUDA_TWIST_MINUS;
+  printfQuda("Computing null vectors for down twist");
+  mg_preconditioner_down = newMultigridQuda(&qi_params.mg_param);
+  qi_params.inv_param.preconditionerDN = mg_preconditioner_down;
 }
 
 static void closeMG(){
-  destroyMultigridQuda(mg_preconditioner);
+  destroyMultigridQuda(mg_preconditioner_up);
+  destroyMultigridQuda(mg_preconditioner_down);
 }
 
 void initQI(char* params, int params_len){
@@ -116,14 +126,14 @@ static void invert_QI_qcd(const void *spinorIn, void *spinorOut){
 }
 
 void invert_QI_qcd_up(const void *spinorIn, void *spinorOut){
-  qi_params.inv_param.twist_flavor=QUDA_TWIST_PLUS; // this is always plus and we choose the sign from the mu value
-  qi_params.inv_param.mu = - fabs(qi_params.inv_param.mu); // in quda we invert the opposite flavor than tmLQCD
+  qi_params.inv_param.preconditioner = qi_params.inv_param.preconditionerDN;
+  qi_params.inv_param.twist_flavor=QUDA_TWIST_MINUS; 
   invert_QI_qcd(spinorIn, spinorOut);
 }
 
 void invert_QI_qcd_down(const void *spinorIn, void *spinorOut){
-  qi_params.inv_param.twist_flavor=QUDA_TWIST_PLUS; // this is always plus and we choose the sign from the mu value
-  qi_params.inv_param.mu = fabs(qi_params.inv_param.mu); // in quda we invert the opposite flavor than tmLQCD
+  qi_params.inv_param.preconditioner = qi_params.inv_param.preconditionerUP;
+  qi_params.inv_param.twist_flavor=QUDA_TWIST_PLUS; 
   invert_QI_qcd(spinorIn, spinorOut);
 }
 
@@ -136,8 +146,8 @@ void checkInvert_Down(){
       ((double*)spinorIn)[i]=1.;
     else
     ((double*)spinorIn)[i]=0.;
-  qi_params.inv_param.twist_flavor=QUDA_TWIST_PLUS;
-  qi_params.inv_param.mu = - fabs(qi_params.inv_param.mu);
+  qi_params.inv_param.twist_flavor=QUDA_TWIST_MINUS;
+  qi_params.inv_param.preconditioner = mg_preconditioner_down;
   mapNormalToEvenOdd(spinorIn,qi_params.inv_param,qi_geo.xdim,qi_geo.ydim,qi_geo.zdim,qi_geo.tdim);
   invertQuda(spinorOut,spinorIn,&qi_params.inv_param);
   mapEvenOddToNormal(spinorOut,qi_params.inv_param,qi_geo.xdim,qi_geo.ydim,qi_geo.zdim,qi_geo.tdim);
@@ -156,7 +166,7 @@ void checkInvert_Up(){
     else
     ((double*)spinorIn)[i]=0.;
   qi_params.inv_param.twist_flavor=QUDA_TWIST_PLUS;
-  qi_params.inv_param.mu = fabs(qi_params.inv_param.mu);
+  qi_params.inv_param.preconditioner = mg_preconditioner_up;
   mapNormalToEvenOdd(spinorIn,qi_params.inv_param,qi_geo.xdim,qi_geo.ydim,qi_geo.zdim,qi_geo.tdim);
   invertQuda(spinorOut,spinorIn,&qi_params.inv_param);
   mapEvenOddToNormal(spinorOut,qi_params.inv_param,qi_geo.xdim,qi_geo.ydim,qi_geo.zdim,qi_geo.tdim);
