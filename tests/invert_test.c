@@ -3,11 +3,17 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+
 int main(int argc,char* argv[]){
   int numprocs;
   int myid;
   char*  params = NULL;
+#ifdef QMP_COMMS
+  QMP_thread_level_t tl;
+  QMP_init_msg_passing(&argc, &argv, QMP_THREAD_MULTIPLE, &tl);
+#else
   MPI_Init(&argc, &argv);
+#endif
   MPI_Comm_size(MPI_COMM_WORLD,&numprocs);         // num. of processes taking part in the calculation                                                                                        
   MPI_Comm_rank(MPI_COMM_WORLD,&myid);             // each process gets its ID                                         
   char   param_name[1024];
@@ -49,6 +55,10 @@ int main(int argc,char* argv[]){
   /* strcpy(gauge_name,getParam("<cfg_name>",params,params_len)); */
   /* printf("%s\n",gauge_name); */
 
+#ifdef QMP_COMMS
+  QMP_finalize_msg_passing();
+#else
   MPI_Finalize();
+#endif
   return 0;
 }

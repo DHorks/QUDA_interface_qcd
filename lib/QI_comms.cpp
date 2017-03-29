@@ -36,6 +36,9 @@ void initCommsQuda(char* params, int params_len){
   assert(qi_geo.xdim>0);assert(qi_geo.ydim>0);
   assert(qi_geo.zdim>0);assert(qi_geo.tdim>0);
   QudaCommsMap func=lex_rank_from_coords_txyz;
+#ifdef QMP_COMMS
+  QMP_declare_logical_topology(qi_geo.gridsize, 4);
+#endif
   initCommsGridQuda(4,qi_geo.gridsize,func,qi_geo.gridsize);
 }
 

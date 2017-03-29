@@ -5,6 +5,10 @@
 #include <Cdefs.h>
 #include <QI_comms.h>
 #include <QI_io.h>
+#ifdef QMP_COMMS
+#include <qmp.h>
+#endif
+
 EXTERN_C
 
 void getGridInfo(char* params, int params_len);
