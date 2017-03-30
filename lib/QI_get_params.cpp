@@ -3,6 +3,8 @@
 #include <QI_qcd.h>
 #include <QI_io.h>
 #include <comm_quda.h>
+#include <face_quda.h>
+#include <util_quda.h>
 #include <string.h>
 #include <stdlib.h>
 #include <vector>
@@ -109,6 +111,12 @@ void getArgs_QI_qcd(char* params, int params_len){
   int mg_nu_pre=0;
   int mg_nu_post=0;
   double mg_mu_factor=1;
+#ifdef QMP_COMMS0
+  char setup_filename[1024];
+#else
+  char *setup_filename = "";
+#endif
+  int read = 0;
   QudaInverterType smoother_type = QUDA_MR_INVERTER;
   QudaInverterType coarsest_inv_type = QUDA_GCR_INVERTER;
   if(inv_type == QUDA_MG_INVERTER){
@@ -125,6 +133,11 @@ void getArgs_QI_qcd(char* params, int params_len){
       sscanf(getParam(&str_blocks[0],params,params_len),"%d %d %d %d",&block_xyzt[0],&block_xyzt[1],&block_xyzt[2],&block_xyzt[3]); // block size for each level
     }
     sscanf(getParam("<QUDA_MG_delta_mu>",params,params_len),"%lf",&mg_mu_factor);
+#ifdef QMP_COMMS0
+    sscanf(getParam("<QUDA_MG_setup_file>",params,params_len),"%s",setup_filename);
+    sscanf(getParam("<QUDA_MG_read_setup>",params,params_len),"%d",&read);
+    if(read && strcmp(setup_filename,"")==0) read = 0;
+#endif
     sscanf(getParam("<QUDA_MG_nu_pre>",params,params_len),"%d",&mg_nu_pre); //The number of pre-smoother applications to do at each multigrid level
     sscanf(getParam("<QUDA_MG_nu_post>",params,params_len),"%d",&mg_nu_post); //The number of post-smoother applications to do at each multigrid level
     smoother_type = get_solver_type( getParam("<QUDA_MG_smoother_type>",params,params_len) ); // inverter type 
@@ -169,13 +182,13 @@ void getArgs_QI_qcd(char* params, int params_len){
   qi_params.gauge_param.gauge_order = QUDA_QDP_GAUGE_ORDER;
   qi_params.gauge_param.t_boundary = boundary_cond;
   qi_params.gauge_param.cpu_prec = QUDA_DOUBLE_PRECISION;
-  QudaPrecision prec = qi_params.gauge_param.cuda_prec = QUDA_DOUBLE_PRECISION;
-  qi_params.gauge_param.reconstruct = QUDA_RECONSTRUCT_12;
-  QudaPrecision prec_sloppy = qi_params.gauge_param.cuda_prec_sloppy = QUDA_SINGLE_PRECISION;
-  qi_params.gauge_param.reconstruct_sloppy = QUDA_RECONSTRUCT_12;
-  QudaPrecision prec_precon = qi_params.gauge_param.cuda_prec_precondition = QUDA_SINGLE_PRECISION;
-  qi_params.gauge_param.reconstruct_precondition = QUDA_RECONSTRUCT_12;
-  qi_params.gauge_param.gauge_fix = QUDA_GAUGE_FIXED_YES; //it was no
+  qi_params.gauge_param.cuda_prec = QUDA_DOUBLE_PRECISION;
+  qi_params.gauge_param.reconstruct = QUDA_RECONSTRUCT_NO;
+  qi_params.gauge_param.cuda_prec_sloppy = QUDA_SINGLE_PRECISION;
+  qi_params.gauge_param.reconstruct_sloppy = QUDA_RECONSTRUCT_NO;
+  qi_params.gauge_param.cuda_prec_precondition = QUDA_SINGLE_PRECISION;
+  qi_params.gauge_param.reconstruct_precondition = QUDA_RECONSTRUCT_NO;
+  qi_params.gauge_param.gauge_fix = QUDA_GAUGE_FIXED_NO;
   
 #define MAX(a,b) ((a)>(b)?(a):(b))
   int x_face_size = qi_params.gauge_param.X[1]*qi_params.gauge_param.X[2]*qi_params.gauge_param.X[3]/2;
@@ -191,6 +204,7 @@ void getArgs_QI_qcd(char* params, int params_len){
   qi_params.inv_param.dslash_type = dslash_type;
   qi_params.inv_param.mass = mass;
   qi_params.inv_param.mu = mu_val;
+  qi_params.inv_param.twist_flavor = QUDA_TWIST_SINGLET;
   qi_params.inv_param.kappa = kappa;
   qi_params.inv_param.solution_type = QUDA_MAT_SOLUTION;
   qi_params.inv_param.inv_type = inv_type;
@@ -219,18 +233,19 @@ void getArgs_QI_qcd(char* params, int params_len){
     qi_params.inv_param.residual_type = (tol != 0) ? static_cast<QudaResidualType_s> ( qi_params.inv_param.residual_type | QUDA_L2_RELATIVE_RESIDUAL) : qi_params.inv_param.residual_type;
     qi_params.inv_param.residual_type = (tol_hq != 0) ? static_cast<QudaResidualType_s> (qi_params.inv_param.residual_type | QUDA_HEAVY_QUARK_RESIDUAL) : qi_params.inv_param.residual_type;
     qi_params.inv_param.tol_hq = 0.; // specify a tolerance for the residual for heavy quark residual
+    qi_params.inv_param.maxiter = 50000;
   }
   else{
     // require both L2 relative and heavy quark residual to determine convergence
     qi_params.inv_param.residual_type = static_cast<QudaResidualType>(QUDA_L2_RELATIVE_RESIDUAL);
     qi_params.inv_param.tol_hq = tol_hq; // specify a tolerance for the residual for heavy quark residual           
+    qi_params.inv_param.maxiter = 300;
   }
 
   for (int i=0; i<qi_params.inv_param.num_offset; i++) {
     qi_params.inv_param.tol_offset[i] = qi_params.inv_param.tol;
     qi_params.inv_param.tol_hq_offset[i] = qi_params.inv_param.tol_hq;
   }
-  qi_params.inv_param.maxiter = 50000;
   qi_params.inv_param.reliable_delta = 1e-4; // reliable delta is related to the mixed precision solver
 
   // domain decomposition preconditioner parameters
@@ -243,11 +258,11 @@ void getArgs_QI_qcd(char* params, int params_len){
   qi_params.inv_param.use_sloppy_partial_accumulator = 1;
   qi_params.inv_param.max_res_increase = 1;
   qi_params.inv_param.verbosity_precondition = QUDA_SILENT;
-  qi_params.inv_param.cuda_prec_precondition = prec_precon;
+  qi_params.inv_param.cuda_prec_precondition = QUDA_SINGLE_PRECISION;
 
   qi_params.inv_param.cpu_prec = QUDA_DOUBLE_PRECISION;
-  qi_params.inv_param.cuda_prec = prec;
-  qi_params.inv_param.cuda_prec_sloppy = prec_sloppy;
+  qi_params.inv_param.cuda_prec = QUDA_DOUBLE_PRECISION;
+  qi_params.inv_param.cuda_prec_sloppy = QUDA_SINGLE_PRECISION;
   qi_params.inv_param.preserve_source = QUDA_PRESERVE_SOURCE_YES;
   qi_params.inv_param.gamma_basis = QUDA_DEGRAND_ROSSI_GAMMA_BASIS;//QUDA_UKQCD_GAMMA_BASIS;
   qi_params.inv_param.dirac_order = QUDA_DIRAC_ORDER;
@@ -260,32 +275,83 @@ void getArgs_QI_qcd(char* params, int params_len){
   
   if (dslash_type == QUDA_CLOVER_WILSON_DSLASH || dslash_type == QUDA_TWISTED_CLOVER_DSLASH) {
     qi_params.inv_param.clover_cpu_prec = QUDA_DOUBLE_PRECISION;
-    qi_params.inv_param.clover_cuda_prec = prec;
-    qi_params.inv_param.clover_cuda_prec_sloppy = prec_sloppy;
-    qi_params.inv_param.clover_cuda_prec_precondition = prec_precon;
+    qi_params.inv_param.clover_cuda_prec = QUDA_DOUBLE_PRECISION;
+    qi_params.inv_param.clover_cuda_prec_sloppy = QUDA_SINGLE_PRECISION;
+    qi_params.inv_param.clover_cuda_prec_precondition = QUDA_SINGLE_PRECISION;
     qi_params.inv_param.clover_order = QUDA_PACKED_CLOVER_ORDER;
-    qi_params.inv_param.clover_coeff = csw*qi_params.inv_param.kappa;
+    qi_params.inv_param.clover_coeff = csw*kappa;
+    qi_params.inv_param.compute_clover = true;
+    qi_params.inv_param.return_clover = 0;
+    qi_params.inv_param.compute_clover_inverse = 1;
+    qi_params.inv_param.return_clover_inverse = 0;
   }
   qi_params.inv_param.Ls = 1;
   qi_params.inv_param.verbosity = verbosity;
   qi_params.inv_param.verbosity_precondition = QUDA_SILENT;
   //=================================== Multigrid params =================//
   if(inv_type == QUDA_MG_INVERTER){
-    qi_params.mg_inv_param = qi_params.inv_param;
+    qi_params.mg_inv_param.Ls = 1;
+    
+    qi_params.mg_inv_param.sp_pad = 0;
+    qi_params.mg_inv_param.cl_pad = 0;
+    
+    qi_params.mg_inv_param.cpu_prec = QUDA_DOUBLE_PRECISION;
+    qi_params.mg_inv_param.cuda_prec = QUDA_DOUBLE_PRECISION;
+    qi_params.mg_inv_param.cuda_prec_sloppy = QUDA_SINGLE_PRECISION;
+    qi_params.mg_inv_param.cuda_prec_precondition = QUDA_SINGLE_PRECISION;
+    qi_params.mg_inv_param.preserve_source = QUDA_PRESERVE_SOURCE_NO;
+    qi_params.mg_inv_param.gamma_basis = QUDA_DEGRAND_ROSSI_GAMMA_BASIS;
+    qi_params.mg_inv_param.dirac_order = QUDA_DIRAC_ORDER;
+    
+    if (dslash_type == QUDA_CLOVER_WILSON_DSLASH || dslash_type == QUDA_TWISTED_CLOVER_DSLASH) {
+      qi_params.mg_inv_param.clover_cpu_prec = QUDA_DOUBLE_PRECISION;
+      qi_params.mg_inv_param.clover_cuda_prec = QUDA_DOUBLE_PRECISION;
+      qi_params.mg_inv_param.clover_cuda_prec_sloppy = QUDA_SINGLE_PRECISION;
+      qi_params.mg_inv_param.clover_cuda_prec_precondition = QUDA_SINGLE_PRECISION;
+      qi_params.mg_inv_param.clover_order = QUDA_PACKED_CLOVER_ORDER;
+      qi_params.mg_inv_param.clover_coeff = csw*kappa;
+    }
+    
+    qi_params.mg_inv_param.input_location = QUDA_CPU_FIELD_LOCATION;
+    qi_params.mg_inv_param.output_location = QUDA_CPU_FIELD_LOCATION;
+    
+    qi_params.mg_inv_param.dslash_type = dslash_type;
+    
+    //Free field!
+    qi_params.mg_inv_param.mass = mass;
+    qi_params.mg_inv_param.kappa = kappa;
+    
+    if (dslash_type == QUDA_TWISTED_MASS_DSLASH || dslash_type == QUDA_TWISTED_CLOVER_DSLASH) {
+      qi_params.mg_inv_param.mu = mu_val;
+      qi_params.mg_inv_param.twist_flavor = QUDA_TWIST_SINGLET;
+    }
+    
+    qi_params.mg_inv_param.dagger = QUDA_DAG_NO;
+    qi_params.mg_inv_param.mass_normalization = QUDA_MASS_NORMALIZATION;
+    
+    qi_params.mg_inv_param.matpc_type = QUDA_MATPC_EVEN_EVEN;
+    qi_params.mg_inv_param.solution_type = QUDA_MAT_SOLUTION;
+    
+    qi_params.mg_inv_param.solve_type = QUDA_DIRECT_SOLVE;
+
+  // these need to tbe set for now but are actually ignored by the MG setup
+  // needed to make it pass the initialization test
     qi_params.mg_inv_param.inv_type = QUDA_GCR_INVERTER;
     qi_params.mg_inv_param.tol = 1e-10;
     qi_params.mg_inv_param.maxiter = 1000;
     qi_params.mg_inv_param.reliable_delta = 1e-10;
     qi_params.mg_inv_param.gcrNkrylov = 10;
-    qi_params.mg_inv_param.solve_type = QUDA_DIRECT_SOLVE;
-    qi_params.mg_inv_param.twist_flavor=QUDA_TWIST_INVALID;
-    qi_params.mg_param.invert_param = &qi_params.mg_inv_param;
 
+    qi_params.mg_inv_param.verbosity = QUDA_SUMMARIZE;
+    qi_params.mg_inv_param.verbosity_precondition = QUDA_SUMMARIZE;
+
+    qi_params.mg_param.invert_param = &qi_params.mg_inv_param;
+    
     for(int i = 0 ; i < mg_nlvls; i++){
       qi_params.mg_param.verbosity[i] = QUDA_SILENT;
       qi_params.mg_param.setup_inv_type[i] = QUDA_CG_INVERTER;
-      qi_params.mg_param.num_setup_iter[i] = 5;
-      qi_params.mg_param.setup_tol[i] = 5e-2;
+      qi_params.mg_param.num_setup_iter[i] = 1;
+      qi_params.mg_param.setup_tol[i] = 1e-4;
       qi_params.mg_param.mu_factor[i] = 1;
       qi_params.mg_param.spin_block_size[i] = 1;
       qi_params.mg_param.nu_pre[i] = mg_nu_pre;
@@ -299,20 +365,44 @@ void getArgs_QI_qcd(char* params, int params_len){
       qi_params.mg_param.omega[i] = 0.85; // over/under relaxation factor
       qi_params.mg_param.location[i] = QUDA_CUDA_FIELD_LOCATION;
     }
+    qi_params.mg_param.setup_tol[0] = 5e-7;
     qi_params.mg_param.setup_type = QUDA_NULL_VECTOR_SETUP;
-    qi_params.mg_param.pre_orthonormalize = QUDA_BOOLEAN_YES;
-    qi_params.mg_param.post_orthonormalize = QUDA_BOOLEAN_NO;
+    qi_params.mg_param.pre_orthonormalize = QUDA_BOOLEAN_NO;
+    qi_params.mg_param.post_orthonormalize = QUDA_BOOLEAN_YES;
     qi_params.mg_param.spin_block_size[0] = 2;
     qi_params.mg_param.smoother[mg_nlvls-1] = coarsest_inv_type;
     qi_params.mg_param.nu_pre[mg_nlvls-1] = 300;
     qi_params.mg_param.nu_post[mg_nlvls-1] = 0;
-    qi_params.mg_param.compute_null_vector = QUDA_COMPUTE_NULL_VECTOR_YES;
+    if(read) {
+      qi_params.mg_param.compute_null_vector = QUDA_COMPUTE_NULL_VECTOR_NO;
+      strcpy(qi_params.mg_param.vec_outfile,"");
+      strcpy(qi_params.mg_param.vec_infile,setup_filename);
+    } else {
+      qi_params.mg_param.compute_null_vector = QUDA_COMPUTE_NULL_VECTOR_YES;
+      strcpy(qi_params.mg_param.vec_outfile,setup_filename);
+      strcpy(qi_params.mg_param.vec_infile,"");
+    }
     qi_params.mg_param.generate_all_levels = QUDA_BOOLEAN_YES;
     qi_params.mg_param.run_verify = QUDA_BOOLEAN_NO;
-    strcpy(qi_params.mg_param.vec_outfile,"");
-    strcpy(qi_params.mg_param.vec_infile,"");
   }
 
+#ifdef QI_PRINT_PARAMS
+  if(verbosity == QUDA_VERBOSE) {
+    printfQuda("\n\n qi_params.gauge_params\n");
+    printQudaGaugeParam(&qi_params.gauge_param);
+    
+    printfQuda("\n\n qi_params.inv_params\n");
+    printQudaInvertParam(&qi_params.inv_param);
+    
+    if(inv_type == QUDA_MG_INVERTER){
+      printfQuda("\n\n qi_params.mg_params\n");
+      printQudaMultigridParam(&qi_params.mg_param);
+      
+      printfQuda("\n\n qi_params.mg_param.invert_params\n");
+      printQudaInvertParam(qi_params.mg_param.invert_param);
+    }
+  }
+#endif
 }
 
 

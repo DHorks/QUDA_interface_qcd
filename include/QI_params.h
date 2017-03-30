@@ -11,9 +11,9 @@ namespace qi_qcd{
     QudaInvertParam inv_param;
     QI_params(){
       gauge_param=newQudaGaugeParam();
-      mg_inv_param=QudaInvertParam();
+      mg_inv_param=newQudaInvertParam();
       mg_param=newQudaMultigridParam();
-      inv_param=QudaInvertParam();
+      inv_param=newQudaInvertParam();
     }
   };
 

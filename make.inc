@@ -20,17 +20,16 @@ INC = -I$(MY_HOME)/include
 INC += -I$(QUDA_INTERFACE_HOME)/include
 INC += -I$(MPI_HOME)/include64
 INC += -I$(QUDA_INSTALL_PATH)/include
-INC += -I$(QUDA_INSTALL_PATH)/lib
 INC += -I$(LIME_HOME)/include
-# Comment in case QMP not used in QUDA
+# Comment in case QMP is not used in QUDA
 INC += -I$(QMP_HOME)/include -DQMP_COMMS -DMULTI_GPU
 
 LIB = -L$(QUDA_INSTALL_PATH)/lib -lquda
 LIB += -L$(MAGMA_INSTALL_PATH)/lib -lmagma -lcublas -L/opt/acml/5.3.1/gfortran64/lib -lacml
 LIB += -L$(CUDA_INSTALL_PATH)/lib64 -lcudart -lcufft
-# Comment in case QIO not used in QUDA
+# Comment in case QIO is not used in QUDA
 LIB += -L$(QIO_HOME)/lib -lqio
-# Comment in case QMP not used in QUDA
+# Comment in case QMP is not used in QUDA
 LIB += -L$(QMP_HOME)/lib -lqmp
 LIB += -L$(LIME_HOME)/lib -llime
 

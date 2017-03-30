@@ -9,7 +9,9 @@ extern "C" {
 #include <lime.h>
 }
 
+#ifndef MULTI_GPU
 #define MULTI_GPU
+#endif
 #ifdef MULTI_GPU
 #include <mpi.h>
 #endif
@@ -386,15 +388,15 @@ read gauge fileld config stored in binary file
      
     }
   else
-    printf("%d bytes reserved for gauge fields (%d x %u)\n", chunksize*nvh*2, chunksize, nvh*2);
+    printfQuda("%d bytes reserved for gauge fields (%d x %u)\n", chunksize*nvh*2, chunksize, nvh*2);
   
   if(MPI_File_read_all(mpifid, ftmp, 4*3*3*2*nvh*2, MPI_DOUBLE, &status) == 1)
-    printf("Error in MPI_File_read_all\n");
+    printfQuda("Error in MPI_File_read_all\n");
   
   if(4*3*3*2*nvh*2*sizeof(double) > 2147483648)
     {
-      printf  ("File too large. At least %lu processes are needed to read this file properly.\n", (4*3*3*2*nvh*2*sizeof(double)/2147483648)+1);
-      printf  ("If some results are wrong, try increasing the number of MPI processes.\n");
+      printfQuda  ("File too large. At least %lu processes are needed to read this file properly.\n", (4*3*3*2*nvh*2*sizeof(double)/2147483648)+1);
+      printfQuda  ("If some results are wrong, try increasing the number of MPI processes.\n");
     }
   
   if(!qcd_isBigEndian())
@@ -665,15 +667,15 @@ static void read_custom_binary_gauge_field_smeared(double **gauge, char *fname, 
      
     }
   else
-    printf("%d bytes reserved for gauge fields (%d x %u)\n", chunksize*nvh*2, chunksize, nvh*2);
+    printfQuda("%d bytes reserved for gauge fields (%d x %u)\n", chunksize*nvh*2, chunksize, nvh*2);
   
   if(MPI_File_read_all(mpifid, ftmp, 4*3*3*2*nvh*2, MPI_DOUBLE, &status) == 1)
     printf("Error in MPI_File_read_all\n");
   
   if(4*3*3*2*nvh*2*sizeof(double) > 2147483648)
     {
-      printf  ("File too large. At least %lu processes are needed to read this file properly.\n", (4*3*3*2*nvh*2*sizeof(double)/2147483648)+1);
-      printf  ("If some results are wrong, try increasing the number of MPI processes.\n");
+      printfQuda  ("File too large. At least %lu processes are needed to read this file properly.\n", (4*3*3*2*nvh*2*sizeof(double)/2147483648)+1);
+      printfQuda  ("If some results are wrong, try increasing the number of MPI processes.\n");
     }
   
   if(!qcd_isBigEndian())
@@ -850,15 +852,15 @@ static void read_custom_binary_gauge_field_andreas(double **gauge, char *fname, 
      
     }
   else
-    printf("%llu bytes reserved for gauge fields (%d x %llu)\n", chunksize*lvol, chunksize, lvol);
+    printfQuda("%llu bytes reserved for gauge fields (%d x %llu)\n", chunksize*lvol, chunksize, lvol);
   
   if(MPI_File_read_all(mpifid, ftmp, 4*3*3*2*lvol, MPI_DOUBLE, &status) == 1)
     printf("Error in MPI_File_read_all\n");
   
   if(4*3*3*2*lvol*sizeof(double) > 2147483648)
     {
-      printf  ("File too large. At least %llu processes are needed to read this file properly.\n", (4*3*3*2*lvol*sizeof(double)/2147483648)+1);
-      printf  ("If some results are wrong, try increasing the number of MPI processes.\n");
+      printfQuda  ("File too large. At least %llu processes are needed to read this file properly.\n", (4*3*3*2*lvol*sizeof(double)/2147483648)+1);
+      printfQuda  ("If some results are wrong, try increasing the number of MPI processes.\n");
     }
   
   if(!qcd_isBigEndian())
@@ -951,7 +953,7 @@ int printVector(char file_pref[], void *vec){
 
   FILE *out;
   if((out = fopen(fileO, "w+")) == NULL){   
-    printf("Error creating file.\n");
+    printfQuda("Error creating file.\n");
     return  -1;
   }
 

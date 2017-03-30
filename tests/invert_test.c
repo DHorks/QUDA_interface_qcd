@@ -45,6 +45,7 @@ int main(int argc,char* argv[]){
 
   initQI(params, params_len);
   checkInvert_Up();
+  checkInvert_Down();
   closeQI();
 
 

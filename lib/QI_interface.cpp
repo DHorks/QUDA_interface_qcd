@@ -21,23 +21,32 @@ extern QI_params qi_params;
 extern QI_geo qi_geo;
 extern int V;
 void *gauge[4];
-void *mg_preconditioner_up;
-void *mg_preconditioner_down;
+void *mg_preconditioner;
+bool is_multigrid_up = true;
+//void *mg_preconditioner_down;
 EXTERN_C
 
 static void initMG(){
   printfQuda("Computing null vectors for up twist");
-  mg_preconditioner_up = newMultigridQuda(&qi_params.mg_param);
-  
+  mg_preconditioner = newMultigridQuda(&qi_params.mg_param);
+  qi_params.inv_param.preconditioner = mg_preconditioner;
+  is_multigrid_up = true;
+  /*
+  if(strcmp(qi_params.mg_param.vec_outfile,"") != 0) {
+    strcpy(qi_params.mg_param.vec_infile,qi_params.mg_param.vec_outfile);
+    strcpy(qi_params.mg_param.vec_outfile,"");
+    qi_params.mg_param.compute_null_vector = QUDA_COMPUTE_NULL_VECTOR_NO;
+  }
   qi_params.mg_inv_param.mu *= -1;
   printfQuda("Computing null vectors for down twist");
   mg_preconditioner_down = newMultigridQuda(&qi_params.mg_param);
   qi_params.mg_inv_param.mu *= -1;
+  */
 }
 
 static void closeMG(){
-  destroyMultigridQuda(mg_preconditioner_up);
-  destroyMultigridQuda(mg_preconditioner_down);
+  destroyMultigridQuda(mg_preconditioner);
+  //  destroyMultigridQuda(mg_preconditioner_down);
 }
 
 void initQI(char* params, int params_len){
@@ -124,14 +133,22 @@ static void invert_QI_qcd(const void *spinorIn, void *spinorOut){
 }
 
 void invert_QI_qcd_up(const void *spinorIn, void *spinorOut){
-  qi_params.inv_param.preconditioner = mg_preconditioner_down;
+  qi_params.mg_inv_param.mu *= -1;
   qi_params.inv_param.mu *= -1;
+  if(is_multigrid_up) {
+    updateMultigridQuda(mg_preconditioner, &qi_params.mg_param);
+    is_multigrid_up = false;
+  }
   invert_QI_qcd(spinorIn, spinorOut);
+  qi_params.mg_inv_param.mu *= -1;
   qi_params.inv_param.mu *= -1;
 }
 
 void invert_QI_qcd_down(const void *spinorIn, void *spinorOut){
-  qi_params.inv_param.preconditioner = mg_preconditioner_up;
+  if(!is_multigrid_up) {
+    updateMultigridQuda(mg_preconditioner, &qi_params.mg_param);
+    is_multigrid_up = true;
+  }
   invert_QI_qcd(spinorIn, spinorOut);
 }
 
@@ -144,8 +161,12 @@ void checkInvert_Down(){
       ((double*)spinorIn)[i]=1.;
     else
     ((double*)spinorIn)[i]=0.;
+  qi_params.mg_inv_param.mu *= -1;
   qi_params.inv_param.mu *= -1;
-  qi_params.inv_param.preconditioner = mg_preconditioner_down;
+  if(is_multigrid_up) {
+    updateMultigridQuda(mg_preconditioner, &qi_params.mg_param);
+    is_multigrid_up = false;
+  }
   mapNormalToEvenOdd(spinorIn,qi_params.inv_param,qi_geo.xdim,qi_geo.ydim,qi_geo.zdim,qi_geo.tdim);
   invertQuda(spinorOut,spinorIn,&qi_params.inv_param);
   mapEvenOddToNormal(spinorOut,qi_params.inv_param,qi_geo.xdim,qi_geo.ydim,qi_geo.zdim,qi_geo.tdim);
@@ -164,7 +185,10 @@ void checkInvert_Up(){
       ((double*)spinorIn)[i]=1.;
     else
     ((double*)spinorIn)[i]=0.;
-  qi_params.inv_param.preconditioner = mg_preconditioner_up;
+  if(!is_multigrid_up) {
+    updateMultigridQuda(mg_preconditioner, &qi_params.mg_param);
+    is_multigrid_up = true;
+  }
   mapNormalToEvenOdd(spinorIn,qi_params.inv_param,qi_geo.xdim,qi_geo.ydim,qi_geo.zdim,qi_geo.tdim);
   invertQuda(spinorOut,spinorIn,&qi_params.inv_param);
   mapEvenOddToNormal(spinorOut,qi_params.inv_param,qi_geo.xdim,qi_geo.ydim,qi_geo.zdim,qi_geo.tdim);

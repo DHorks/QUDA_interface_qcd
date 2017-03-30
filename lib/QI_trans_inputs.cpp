@@ -288,7 +288,7 @@ const char* get_solver_str(QudaInverterType type)
   case QUDA_CGNE_INVERTER:
     ret = "cgne";
     break;
-  case QUDA_CGNr_INVERTER:
+  case QUDA_CGNR_INVERTER:
     ret = "cgnr";
     break;
   case QUDA_CG3_INVERTER:
