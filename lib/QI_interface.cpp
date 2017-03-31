@@ -31,17 +31,6 @@ static void initMG(){
   mg_preconditioner = newMultigridQuda(&qi_params.mg_param);
   qi_params.inv_param.preconditioner = mg_preconditioner;
   is_multigrid_up = true;
-  /*
-  if(strcmp(qi_params.mg_param.vec_outfile,"") != 0) {
-    strcpy(qi_params.mg_param.vec_infile,qi_params.mg_param.vec_outfile);
-    strcpy(qi_params.mg_param.vec_outfile,"");
-    qi_params.mg_param.compute_null_vector = QUDA_COMPUTE_NULL_VECTOR_NO;
-  }
-  qi_params.mg_inv_param.mu *= -1;
-  printfQuda("Computing null vectors for down twist");
-  mg_preconditioner_down = newMultigridQuda(&qi_params.mg_param);
-  qi_params.mg_inv_param.mu *= -1;
-  */
 }
 
 static void closeMG(){
@@ -133,6 +122,14 @@ static void invert_QI_qcd(const void *spinorIn, void *spinorOut){
 }
 
 void invert_QI_qcd_up(const void *spinorIn, void *spinorOut){
+  if(!is_multigrid_up) {
+    updateMultigridQuda(mg_preconditioner, &qi_params.mg_param);
+    is_multigrid_up = true;
+  }
+  invert_QI_qcd(spinorIn, spinorOut);
+}
+
+void invert_QI_qcd_down(const void *spinorIn, void *spinorOut){
   qi_params.mg_inv_param.mu *= -1;
   qi_params.inv_param.mu *= -1;
   if(is_multigrid_up) {
@@ -142,14 +139,6 @@ void invert_QI_qcd_up(const void *spinorIn, void *spinorOut){
   invert_QI_qcd(spinorIn, spinorOut);
   qi_params.mg_inv_param.mu *= -1;
   qi_params.inv_param.mu *= -1;
-}
-
-void invert_QI_qcd_down(const void *spinorIn, void *spinorOut){
-  if(!is_multigrid_up) {
-    updateMultigridQuda(mg_preconditioner, &qi_params.mg_param);
-    is_multigrid_up = true;
-  }
-  invert_QI_qcd(spinorIn, spinorOut);
 }
 
 void checkInvert_Down(){
@@ -170,6 +159,7 @@ void checkInvert_Down(){
   mapNormalToEvenOdd(spinorIn,qi_params.inv_param,qi_geo.xdim,qi_geo.ydim,qi_geo.zdim,qi_geo.tdim);
   invertQuda(spinorOut,spinorIn,&qi_params.inv_param);
   mapEvenOddToNormal(spinorOut,qi_params.inv_param,qi_geo.xdim,qi_geo.ydim,qi_geo.zdim,qi_geo.tdim);
+  qi_params.mg_inv_param.mu *= -1;
   qi_params.inv_param.mu *= -1;
   //  printVector("/home/khadjiyiannakou/QUDA_interface_qcd/spinorOut",spinorOut);
   free(spinorIn);

@@ -100,6 +100,7 @@ void getArgs_QI_qcd(char* params, int params_len){
   double tol; sscanf(getParam("<QUDA_tolerance>",params,params_len),"%lf",&tol); // tolerance for the inverter
   double kappa; sscanf(getParam("<QUDA_kappa>",params,params_len),"%lf",&kappa); double mass = 0.5/kappa-4.;
   double mu_val=0; if(dslash_type == QUDA_TWISTED_MASS_DSLASH || dslash_type == QUDA_TWISTED_CLOVER_DSLASH) sscanf(getParam("<QUDA_mu>",params,params_len),"%lf",&mu_val); // mu value for TMF
+  mu_val *= -1; //for matching convention with qcd gamma 5
   double csw=0; if(dslash_type == QUDA_CLOVER_WILSON_DSLASH || dslash_type == QUDA_TWISTED_CLOVER_DSLASH)sscanf(getParam("<QUDA_csw>",params,params_len),"%lf",&csw); // clover coeff
   QudaInverterType inv_type = get_solver_type( getParam("<QUDA_solver_type>",params,params_len) ); // inverter type 
   if( (inv_type != QUDA_CG_INVERTER) && (inv_type != QUDA_MG_INVERTER) ){ // I will focus on these inverters now
