@@ -374,6 +374,7 @@ void getArgs_QI_qcd(char* params, int params_len){
     qi_params.mg_param.smoother[mg_nlvls-1] = coarsest_inv_type;
     qi_params.mg_param.nu_pre[mg_nlvls-1] = 300;
     qi_params.mg_param.nu_post[mg_nlvls-1] = 0;
+    qi_params.mg_param.mu_factor[mg_nlvls-1] = mg_mu_factor;
     if(read) {
       qi_params.mg_param.compute_null_vector = QUDA_COMPUTE_NULL_VECTOR_NO;
       strcpy(qi_params.mg_param.vec_outfile,"");
